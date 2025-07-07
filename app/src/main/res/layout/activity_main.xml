@@ -1,186 +1,264 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activity.MainActivity">
+    android:background="@color/background_primary"
+    tools:context=".ui.main.MainActivity">
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cv_top"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+    <!-- Header -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/surface"
+        android:elevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:title="@string/app_name"
+        app:titleTextColor="@color/on_surface">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp">
+        <ImageButton
+            android:id="@+id/btn_more"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="end"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/more_options"
+            android:src="@drawable/ic_more_vert"
+            android:tint="@color/on_surface" />
 
-            <ImageView
+    </com.google.android.material.appbar.MaterialToolbar>
 
-                android:id="@+id/img_more"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:padding="17dp"
-                android:src="@drawable/ic_home_icon_nor_more" />
+    <!-- Banner Ad -->
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:adSize="BANNER"
+        app:adUnitId="@string/admob_banner_id"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
-            <TextView
-                style="?android:textAppearanceMedium"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
-                android:text="@string/app_name"
-                android:textColor="@color/black" />
-        </RelativeLayout>
-    </androidx.cardview.widget.CardView>
-
-    <RelativeLayout
-
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@+id/cv_top">
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:scaleType="centerCrop"
-            android:src="@drawable/home_bg_top" />
-
-        <TextView
-            android:id="@+id/tv_tag"
-            style="?android:textAppearanceMedium"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="16dp"
-            android:layout_marginTop="50dp"
-            android:layout_marginRight="16dp"
-            android:text="@string/tag_home"
-            android:textColor="@color/black"></TextView>
-
-        <TextView
-            android:id="@+id/tv_info_tag"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/tv_tag"
-            android:layout_marginLeft="16dp"
-            android:layout_marginTop="15dp"
-            android:layout_marginRight="16dp"
-            android:lines="2"
-            android:text="@string/discription_tag"
-            android:textColor="@color/black">
-
-        </TextView>
+    <!-- Main Content -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/adView">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@+id/tv_info_tag"
-            android:layout_marginTop="50dp"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <RelativeLayout
-                android:id="@+id/rl_scan_photo"
+            <!-- Header Text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/main_title"
+                android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+                android:textColor="@color/on_background" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:text="@string/main_subtitle"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="@color/on_background_variant" />
+
+            <!-- Scan Photos Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_scan_photos"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
-                android:layout_margin="20dp"
-                android:background="@drawable/custom_bg_scan_image">
+                android:layout_marginBottom="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/primary_container"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:rippleColor="@color/on_primary_container">
 
-                <ImageView
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_centerVertical="true"
-                    android:layout_marginLeft="30dp"
-                    android:src="@drawable/home_icon_nov_photos" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="20dp">
 
-                <TextView
-                    style="?android:textAppearanceMedium"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_marginLeft="100dp"
-                    android:text="@string/scan_photo"
-                    android:textColor="@color/white">
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="16dp"
+                        android:src="@drawable/ic_image"
+                        android:tint="@color/on_primary_container" />
 
-                </TextView>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_alignParentRight="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginRight="20dp"
-                    android:src="@drawable/home_button_arrows" />
-            </RelativeLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/scan_photos"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textColor="@color/on_primary_container" />
 
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/scan_photos_desc"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="@color/on_primary_container" />
 
-            <RelativeLayout
-                android:id="@+id/rl_scan_video"
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        android:tint="@color/on_primary_container" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Scan Videos Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_scan_videos"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
-                android:layout_margin="20dp"
-                android:background="@drawable/custom_bg_scan_video">
+                android:layout_marginBottom="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/secondary_container"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:rippleColor="@color/on_secondary_container">
 
-                <ImageView
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_centerVertical="true"
-                    android:layout_marginLeft="30dp"
-                    android:src="@drawable/home_icon_nov_video" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="20dp">
 
-                <TextView
-                    style="?android:textAppearanceMedium"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_marginLeft="100dp"
-                    android:text="@string/scan_video"
-                    android:textColor="@color/white">
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="16dp"
+                        android:src="@drawable/ic_video"
+                        android:tint="@color/on_secondary_container" />
 
-                </TextView>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_alignParentRight="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginRight="20dp"
-                    android:src="@drawable/home_button_arrows" />
-            </RelativeLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/scan_videos"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textColor="@color/on_secondary_container" />
 
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/scan_videos_desc"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="@color/on_secondary_container" />
 
-            <RelativeLayout
-                android:id="@+id/rl_file_saved"
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        android:tint="@color/on_secondary_container" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Recovered Files Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_recovered_files"
                 android:layout_width="match_parent"
                 android:layout_height="120dp"
-                android:layout_margin="20dp"
-                android:background="@drawable/custom_bg_audio">
+                android:clickable="true"
+                android:focusable="true"
+                app:cardBackgroundColor="@color/tertiary_container"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:rippleColor="@color/on_tertiary_container">
 
-                <ImageView
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:layout_centerVertical="true"
-                    android:layout_marginLeft="30dp"
-                    android:src="@drawable/home_icon_nov_other" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="20dp">
 
-                <TextView
-                    style="?android:textAppearanceMedium"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_marginLeft="100dp"
-                    android:text="@string/file_recovered"
-                    android:textColor="@color/white">
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="16dp"
+                        android:src="@drawable/ic_folder"
+                        android:tint="@color/on_tertiary_container" />
 
-                </TextView>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_alignParentRight="true"
-                    android:layout_centerVertical="true"
-                    android:layout_marginRight="20dp"
-                    android:src="@drawable/home_button_arrows" />
-            </RelativeLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/recovered_files"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                            android:textColor="@color/on_tertiary_container" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/recovered_files_desc"
+                            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                            android:textColor="@color/on_tertiary_container" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_arrow_forward"
+                        android:tint="@color/on_tertiary_container" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
-    </RelativeLayout>
 
-</RelativeLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

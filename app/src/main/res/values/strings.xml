@@ -1,42 +1,52 @@
 <resources>
     <string name="app_name">Photo Recovery</string>
-    <string name="tag_home">Please choose a type to recover:</string>
-    <string name="discription_tag">The earlier tobe scanned, the more chance to be recovered</string>
-    <string name="scan_photo">Free Scan for Photos</string>
-    <string name="scan_audio">Free Scan for Audio</string>
-    <string name="scan_video">Free Scan for Videos</string>
+    
+    <!-- Main Activity -->
+    <string name="main_title">Recover Your Lost Files</string>
+    <string name="main_subtitle">Choose a file type to start scanning for recoverable files</string>
+    <string name="scan_photos">Scan for Photos</string>
+    <string name="scan_photos_desc">Find deleted images and pictures</string>
+    <string name="scan_videos">Scan for Videos</string>
+    <string name="scan_videos_desc">Recover deleted video files</string>
+    <string name="recovered_files">Recovered Files</string>
+    <string name="recovered_files_desc">View previously recovered files</string>
+    <string name="more_options">More options</string>
+    
+    <!-- Permissions -->
+    <string name="permission_required">Permission Required</string>
+    <string name="permission_denied">Permission Denied</string>
+    <string name="permission_denied_message">Storage permissions are required to scan and recover files. Please grant permissions in app settings.</string>
+    <string name="manage_storage_permission_message">This app needs access to manage all files to scan for deleted content. Please grant the permission in the next screen.</string>
+    <string name="grant">Grant</string>
+    <string name="cancel">Cancel</string>
+    <string name="settings">Settings</string>
+    <string name="exit">Exit</string>
+    
+    <!-- Scan Activity -->
+    <string name="scanning">Scanning…</string>
+    <string name="scan_complete">Scan Complete</string>
+    <string name="files_found">%d files found</string>
     <string name="select_all">Select All</string>
-
-
-    <string name="selected_count">(%d selected)</string>
-    <string name="all_files_count">All Files(%d)</string>
-
-
-    <string name="restoring_number_format">Restored ... %d files</string>
-    <string name="restore_folder_path_audio">RestoredAudios</string>
-    <string name="restore_folder_path_photo">RestoredPhotos</string>
-    <string name="restore_folder_path_video">RestoredVideos</string>
-    <string name="scanning">Scanning</string>
-    <string name="recover">Recover Now</string>
-    <string name="cleaned_up">Cleaned Up</string>
-    <string name="selected">Selected</string>
-    <string name="recovered">Recovered</string>
-    <string name="delete_file">Delete File</string>
-    <string name="share_file">Share File</string>
-    <string name="warning_select_image">Please select image befor recover</string>
-    <string name="rate_app">Rate App</string>
-    <string name="share_app">Share App</string>
-    <string name="file_recovered">File Recovered</string>
-
-    <string name="share_message">Check out this awesome app: https://play.google.com/store/apps/details?id=%s</string>
-    <string name="choose_share_option">Share via</string>
-    <string name="share_error">Could not share app</string>
-
-    <!--ads-->
-    <string name="mobile_id" translatable="false">ca-app-pub-3940256099942544~3347511713</string>
-    <string name="ads_full" translatable="false">ca-app-pub-3940256099942544/1033173712</string>
-    <string name="ads_banner" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
-    <string name="empty_image">Empty image saved!</string>
-    <string name="video_empty">Video empty!</string>
-    <string name="tag"><![CDATA[Recover photo,video & retrieve lost memories]]></string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="recover_selected">Recover Selected</string>
+    <string name="selected_count">%d selected</string>
+    
+    <!-- Recovery -->
+    <string name="recovering">Recovering Files…</string>
+    <string name="recovery_complete">Recovery Complete</string>
+    <string name="files_recovered">%d files recovered successfully</string>
+    <string name="recovery_failed">Recovery failed</string>
+    
+    <!-- Common -->
+    <string name="ok">OK</string>
+    <string name="error">Error</string>
+    <string name="loading">Loading…</string>
+    <string name="retry">Retry</string>
+    <string name="share">Share</string>
+    <string name="delete">Delete</string>
+    
+    <!-- Ads -->
+    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_interstitial_id">ca-app-pub-3940256099942544/1033173712</string>
 </resources>

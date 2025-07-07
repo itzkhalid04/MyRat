@@ -1,0 +1,42 @@
+<resources>
+    <string name="app_name">Photo Recovery</string>
+    <string name="tag_home">Please choose a type to recover:</string>
+    <string name="discription_tag">The earlier tobe scanned, the more chance to be recovered</string>
+    <string name="scan_photo">Free Scan for Photos</string>
+    <string name="scan_audio">Free Scan for Audio</string>
+    <string name="scan_video">Free Scan for Videos</string>
+    <string name="select_all">Select All</string>
+
+
+    <string name="selected_count">(%d selected)</string>
+    <string name="all_files_count">All Files(%d)</string>
+
+
+    <string name="restoring_number_format">Restored ... %d files</string>
+    <string name="restore_folder_path_audio">RestoredAudios</string>
+    <string name="restore_folder_path_photo">RestoredPhotos</string>
+    <string name="restore_folder_path_video">RestoredVideos</string>
+    <string name="scanning">Scanning</string>
+    <string name="recover">Recover Now</string>
+    <string name="cleaned_up">Cleaned Up</string>
+    <string name="selected">Selected</string>
+    <string name="recovered">Recovered</string>
+    <string name="delete_file">Delete File</string>
+    <string name="share_file">Share File</string>
+    <string name="warning_select_image">Please select image befor recover</string>
+    <string name="rate_app">Rate App</string>
+    <string name="share_app">Share App</string>
+    <string name="file_recovered">File Recovered</string>
+
+    <string name="share_message">Check out this awesome app: https://play.google.com/store/apps/details?id=%s</string>
+    <string name="choose_share_option">Share via</string>
+    <string name="share_error">Could not share app</string>
+
+    <!--ads-->
+    <string name="mobile_id" translatable="false">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="ads_full" translatable="false">ca-app-pub-3940256099942544/1033173712</string>
+    <string name="ads_banner" translatable="false">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="empty_image">Empty image saved!</string>
+    <string name="video_empty">Video empty!</string>
+    <string name="tag"><![CDATA[Recover photo,video & retrieve lost memories]]></string>
+</resources>

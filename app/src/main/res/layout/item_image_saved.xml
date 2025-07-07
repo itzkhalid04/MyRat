@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_margin="5dp"
+    android:layout_height="wrap_content">
+
+    <com.theophrast.ui.widget.SquareImageView
+        android:id="@+id/img_avatar_file"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/img_test" />
+
+    <ImageView
+        android:id="@+id/img_option_file"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_alignParentRight="true"
+        android:layout_margin="5dp"
+        android:src="@drawable/ic_option"
+        android:tint="@color/white" />
+
+    <ImageView
+        android:visibility="gone"
+        android:layout_width="30dp"
+        android:id="@+id/img_play_video"
+        android:layout_height="30dp"
+        android:layout_centerInParent="true"
+        android:src="@drawable/ic_play"
+        android:tint="@color/white" />
+</RelativeLayout>
